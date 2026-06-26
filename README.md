@@ -18,6 +18,30 @@ A natural-language analytics workspace for Issa's client conversation data. The 
 - **Proactive intelligence:** Anomaly Radar and Client Risk Queue surface operational issues before users know what to ask.
 - **Transparent evidence:** every answer includes SQL, evidence notes, caveats, confidence, charts, and tables.
 
+## Process
+
+I approached the project as an internal analytics product rather than a generic text-to-SQL demo.
+
+1. **Schema first:** I started by inspecting the available Postgres tables and mapping the business meaning of the important fields: conversation start time, client/contact identity, channel, assignee, lifecycle/current step, message direction, AI flags, and operational status flags.
+2. **Core query loop:** I built a backend flow that turns a natural-language question into a schema-aware SQL plan, validates and executes read-only SQL, then synthesizes a plain-English answer from the returned rows.
+3. **Investigation layer:** I added playbooks for broad business questions like new-client decline, team demand, churn risk, and unusual patterns so the app can decompose ambiguous questions into multiple supporting signals.
+4. **Product polish:** I added follow-up memory, clickable recommended actions, confidence/caveats, saved investigations, transparent SQL evidence, interactive charts, and separate pages for proactive operational workflows.
+5. **Deployment readiness:** I separated local secrets from committed templates and documented a production deployment path for Render + Vercel.
+
+## Architecture Decisions
+
+- **FastAPI backend instead of putting database access in the frontend:** SQL generation, validation, execution, and secrets stay server-side.
+- **React + Vite frontend:** a lightweight client app was enough for the dashboard experience without adding Next.js complexity.
+- **Read-only Postgres access:** the app is designed for analytics and investigation, so the database connection is intentionally read-only.
+- **Two LLM calls per normal answer:** the first call plans SQL; the second call explains actual query results. This keeps the diagnosis grounded in data instead of letting the model answer from intuition.
+- **Deterministic proactive intelligence:** Anomaly Radar and Client Risk Queue are SQL/rule based, not LLM guesses. They can be trusted as operational monitors and then handed off to the LLM workflow for deeper analysis.
+- **Frontend chart intelligence:** Recharts keeps visualizations interactive. The frontend detects grouped result shapes and renders multi-series bars/lines instead of depending on static server-generated chart images.
+- **Transparent evidence model:** every answer exposes SQL, evidence notes, caveats, confidence, and recommended actions so internal users can inspect how the answer was produced.
+
+## Time Spent
+
+I spent approximately **8-10 focused hours** building the current version: initial product plan, backend query engine, OpenAI integration, live schema adaptation, proactive intelligence pages, frontend UI, chart improvements, documentation, and deployment preparation.
+
 ## Local Setup
 
 ### Folder Structure
@@ -120,43 +144,6 @@ The app currently derives:
 - inactive clients from latest `messages.created_at` or conversation update time
 - channel mix from `conversations.channel_name` / `conversations.channel_source`
 - backlog from active, unblocked, not-handed-off conversations grouped by assignee
-
-## Current State
-
-This repo starts with a working product skeleton and a deterministic query engine for the core demo prompts. Once the Neon credentials are added, schema discovery can confirm actual table/column names and the SQL templates can be adapted to the real synthetic dataset.
-
-## Push To Your Git Repo
-
-1. Create an empty repo on GitHub.
-
-2. Confirm secrets are not staged:
-
-   ```bash
-   git status --short
-   ```
-
-   You should not see `backend/.env` or `frontend/.env`.
-
-3. Commit the project:
-
-   ```bash
-   git add .
-   git commit -m "Initial Issa Insight app"
-   ```
-
-4. Connect your remote and push:
-
-   ```bash
-   git branch -M main
-   git remote add origin git@github.com:YOUR_USERNAME/YOUR_REPO.git
-   git push -u origin main
-   ```
-
-Use the HTTPS remote instead if you prefer:
-
-```bash
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
-```
 
 ## Deployment
 
