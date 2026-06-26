@@ -45,6 +45,11 @@ Settings:
 - Build command: `pip install -r requirements.txt`
 - Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 
+If Render is building from the repository root and shows `No such file or directory: requirements.txt`, either set **Root Directory** to `backend` or use these root-level commands instead:
+
+- Build command: `cd backend && pip install -r requirements.txt`
+- Start command: `cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+
 Environment variables:
 
 ```text
@@ -52,7 +57,7 @@ ISSA_DATABASE_URL=postgresql://...
 OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-5.5
 APP_ENV=production
-ALLOWED_ORIGINS=https://YOUR_FRONTEND_DOMAIN.vercel.app
+ALLOWED_ORIGINS=https://issaanalyticsdashboard.vercel.app
 ```
 
 After deployment, verify:
@@ -103,4 +108,3 @@ Include:
 - Vercel frontend URL
 - Render backend health URL
 - Loom walkthrough URL
-
