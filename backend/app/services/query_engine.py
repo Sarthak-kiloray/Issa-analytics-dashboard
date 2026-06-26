@@ -338,14 +338,103 @@ def _safe_fetch(plan: QueryPlan) -> list[dict[str, Any]]:
 def _summarize_direct(plan: QueryPlan, rows: list[dict[str, Any]]) -> str:
     if not rows:
         return "I ran the query safely, but it returned no rows. Once we confirm the schema, this may need a table or column mapping adjustment."
+    if plan.intent == "monthly_conversations":
+        return _summarize_monthly_conversations(rows)
+    if plan.intent == "response_time_by_member":
+        return _summarize_response_times(rows)
+    if plan.intent == "inactive_clients":
+        return _summarize_inactive_clients(rows)
     return f"I found {len(rows)} result rows for {plan.title.lower()}. The chart is ready, and the SQL is available in the evidence panel."
+
+
+def _summarize_monthly_conversations(rows: list[dict[str, Any]]) -> str:
+    sorted_rows = sorted(rows, key=lambda row: str(row.get("period") or ""))
+    first = sorted_rows[0]
+    latest = sorted_rows[-1]
+    previous = sorted_rows[-2] if len(sorted_rows) > 1 else None
+    peak = max(sorted_rows, key=lambda row: int(row.get("conversations") or 0))
+
+    latest_count = int(latest.get("conversations") or 0)
+    peak_count = int(peak.get("conversations") or 0)
+    latest_label = _period_label(latest.get("period"))
+    peak_label = _period_label(peak.get("period"))
+
+    if previous:
+        previous_count = int(previous.get("conversations") or 0)
+        delta = latest_count - previous_count
+        direction = "up" if delta > 0 else "down" if delta < 0 else "flat"
+        change_text = f"{latest_label} is {direction} by {abs(delta)} conversations versus {_period_label(previous.get('period'))}."
+    else:
+        first_count = int(first.get("conversations") or 0)
+        change_text = f"The series starts at {first_count} conversations in {_period_label(first.get('period'))}."
+
+    return (
+        f"New client conversations peaked in {peak_label} at {peak_count} conversations. "
+        f"The latest visible month, {latest_label}, has {latest_count} conversations; {change_text} "
+        "If the latest month is still in progress, treat the drop as a month-to-date signal and compare it with the same day range in prior months before escalating."
+    )
+
+
+def _summarize_response_times(rows: list[dict[str, Any]]) -> str:
+    ranked = sorted(rows, key=lambda row: float(row.get("avg_hours") or 0), reverse=True)
+    slowest = ranked[0]
+    fastest = ranked[-1]
+    return (
+        f"{slowest.get('team_member', 'The slowest assignee')} has the slowest average first response at "
+        f"{float(slowest.get('avg_hours') or 0):.1f} hours, while {fastest.get('team_member', 'the fastest assignee')} "
+        f"is fastest at {float(fastest.get('avg_hours') or 0):.1f} hours. "
+        "The team should inspect workload, handoffs, and unanswered incoming threads for the slowest owners."
+    )
+
+
+def _summarize_inactive_clients(rows: list[dict[str, Any]]) -> str:
+    oldest = rows[0]
+    return (
+        f"I found {len(rows)} clients with no contact in over 30 days. "
+        f"The stalest visible client is {oldest.get('contact_name') or oldest.get('contact_id')} "
+        f"with last contact on {_period_label(oldest.get('last_contact_at'))}. "
+        "This should be treated as a follow-up queue, starting with open lifecycle or current-step records."
+    )
+
+
+def _period_label(value: Any) -> str:
+    text = str(value or "unknown")
+    if "T" in text:
+        text = text.split("T", 1)[0]
+    if len(text) >= 10:
+        return text[:10]
+    return text
 
 
 def _summarize_investigation(key: str, results: list[dict[str, Any]]) -> str:
     completed = len(results)
     if key == "team_demand":
-        return f"I checked {completed} demand signals: backlog by owner and recent daily intake. The strongest diagnosis should come from comparing whether open work is rising faster than new volume."
-    return f"I checked {completed} acquisition signals: new-client trend, channel mix, and response pressure. The likely cause is whichever signal moved most sharply in the latest period."
+        backlog = next((item["rows"] for item in results if item["plan"].intent == "open_conversation_backlog"), [])
+        volume = next((item["rows"] for item in results if item["plan"].intent == "daily_volume"), [])
+        top_owner = backlog[0] if backlog else {}
+        latest_volume = volume[-1] if volume else {}
+        return (
+            f"I checked {completed} demand signals: backlog by owner and recent daily intake. "
+            f"The largest visible backlog is with {top_owner.get('team_member', 'an assignee')} "
+            f"at {top_owner.get('open_conversations', 'unknown')} open conversations, while the latest daily intake is "
+            f"{latest_volume.get('conversations', 'unknown')} conversations on {_period_label(latest_volume.get('period'))}. "
+            "The team should compare overloaded owners against recent intake before deciding whether to rebalance work."
+        )
+
+    trend = next((item["rows"] for item in results if item["plan"].intent == "new_clients_by_week"), [])
+    channels = next((item["rows"] for item in results if item["plan"].intent == "conversation_sources"), [])
+    latest = trend[-1] if trend else {}
+    previous = trend[-2] if len(trend) > 1 else {}
+    top_channel = channels[0] if channels else {}
+    delta = int(latest.get("new_clients") or 0) - int(previous.get("new_clients") or 0)
+    direction = "down" if delta < 0 else "up" if delta > 0 else "flat"
+    return (
+        f"I checked {completed} acquisition signals: new-client trend, channel mix, and response pressure. "
+        f"The latest visible week is {direction} by {abs(delta)} new clients versus the prior week, "
+        f"and the largest recent channel is {top_channel.get('channel', 'unknown')} with "
+        f"{top_channel.get('conversations', 'unknown')} conversations. "
+        "The next best drilldown is to compare channel movement and qualified rate over the same period."
+    )
 
 
 def _evidence_from_rows(rows: list[dict[str, Any]]) -> list[str]:
