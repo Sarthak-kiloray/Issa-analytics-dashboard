@@ -66,6 +66,7 @@ OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-5.5
 APP_ENV=production
 ALLOWED_ORIGINS=https://issaanalyticsdashboard.vercel.app
+ALLOWED_ORIGIN_REGEX=https://.*\.vercel\.app
 ```
 
 After deployment, verify:

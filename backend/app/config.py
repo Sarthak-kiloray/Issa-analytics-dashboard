@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     openai_model: str = Field(default="gpt-5.5", validation_alias="OPENAI_MODEL")
     app_env: str = "development"
     allowed_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    allowed_origin_regex: str = Field(default=r"https://.*\.vercel\.app", validation_alias="ALLOWED_ORIGIN_REGEX")
 
     model_config = SettingsConfigDict(
         env_file=(".env", ".env.example"),
@@ -19,6 +20,10 @@ class Settings(BaseSettings):
     @property
     def cors_origins(self) -> list[str]:
         return [origin.strip() for origin in self.allowed_origins.split(",") if origin.strip()]
+
+    @property
+    def cors_origin_regex(self) -> str | None:
+        return self.allowed_origin_regex.strip() or None
 
 
 @lru_cache
