@@ -56,6 +56,8 @@ For an already-created Render service, manually update the service settings. Ren
 - Build command: `pip install -r requirements.txt`
 - Start command: `cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 
+The repo also includes a small root `app` import shim, so `uvicorn app.main:app --host 0.0.0.0 --port $PORT` can work from the repo root if Render ignores the `cd backend` start command.
+
 Environment variables:
 
 ```text
