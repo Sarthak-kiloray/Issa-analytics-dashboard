@@ -50,6 +50,12 @@ If Render is building from the repository root and shows `No such file or direct
 - Build command: `cd backend && pip install -r requirements.txt`
 - Start command: `cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 
+For an already-created Render service, manually update the service settings. Render may not apply `render.yaml` to an existing manual service. The safest settings are:
+
+- Root Directory: leave blank
+- Build command: `pip install -r requirements.txt`
+- Start command: `cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+
 Environment variables:
 
 ```text
