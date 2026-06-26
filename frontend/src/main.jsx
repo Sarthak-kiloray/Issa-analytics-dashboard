@@ -215,6 +215,14 @@ function App() {
     submit(`Follow up on this recommended action: ${action}. Use the prior investigation context, show supporting data, and recommend the next operational step.`);
   }
 
+  function startNewInvestigation() {
+    setConversationHistory([]);
+    setAnswer(seedAnswer);
+    setQuestion("");
+    setError("");
+    setActiveView("ask");
+  }
+
   function openSavedInvestigation(item) {
     setAnswer(item.answer);
     setQuestion(item.question);
@@ -265,6 +273,7 @@ function App() {
             onSubmit={submit}
             onSave={saveCurrentInvestigation}
             onAction={runRecommendedAction}
+            onNewInvestigation={startNewInvestigation}
           />
         )}
 
@@ -343,7 +352,7 @@ function Sidebar({ activeView, onNavigate, onPick, savedInvestigations, onOpenSa
   );
 }
 
-function AskView({ question, setQuestion, loading, answer, history, onSubmit, onSave, onAction }) {
+function AskView({ question, setQuestion, loading, answer, history, onSubmit, onSave, onAction, onNewInvestigation }) {
   return (
     <>
       <section className="ask-panel">
@@ -371,7 +380,7 @@ function AskView({ question, setQuestion, loading, answer, history, onSubmit, on
         </div>
       </section>
 
-      <FollowUpMemory history={history} onPick={onSubmit} />
+      <FollowUpMemory history={history} onPick={onSubmit} onNewInvestigation={onNewInvestigation} />
 
       <section className="content-grid">
         <section className="answer-column">
@@ -386,7 +395,7 @@ function AskView({ question, setQuestion, loading, answer, history, onSubmit, on
   );
 }
 
-function FollowUpMemory({ history, onPick }) {
+function FollowUpMemory({ history, onPick, onNewInvestigation }) {
   if (!history.length) return null;
   return (
     <section className="memory-strip">
@@ -400,6 +409,9 @@ function FollowUpMemory({ history, onPick }) {
       </button>
       <button onClick={() => onPick("What should the team do next based on this?")}>
         What should we do next?
+      </button>
+      <button className="new-investigation-button" onClick={onNewInvestigation}>
+        New investigation
       </button>
     </section>
   );

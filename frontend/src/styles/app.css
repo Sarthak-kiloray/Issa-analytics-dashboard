@@ -536,6 +536,12 @@ nav .nav-active {
   font-weight: 700;
 }
 
+.memory-strip .new-investigation-button {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+
 .intel-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr);
